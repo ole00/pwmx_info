@@ -50,6 +50,10 @@ A tool to decode parameters from PWMX files for Anycubic Photon Mono X 3D printe
 
 * RLE records are stored in sequential order. To distinguish the BW and Antialiasing record use the top 4 bits
   of the first byte.
+* To decode the layer image: treat your destination image as 1D array of bytes. Read each record from the source data
+  and fill in the number of pixel in the destination array (your layer image) by the decoded color. Advance
+  the destination array pointer by the number of pixels decoded.
+* The layer image is flipped Left <--> Right.
   
 **Compilation and running:** 
 * ensure java jdk is installed (at least version 1.4)
