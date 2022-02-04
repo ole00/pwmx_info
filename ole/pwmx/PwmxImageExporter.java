@@ -76,8 +76,7 @@ public class PwmxImageExporter {
 			
 			// render non-black pixels only
 			if (rgb > 0) {
-				// flip the image left<->right
-				img.setRGB(w - 1 - x, y, 0xFF000000 | (rgb << 16) | (rgb << 8) | rgb);
+				img.setRGB(x, y, 0xFF000000 | (rgb << 16) | (rgb << 8) | rgb);
 			}
 		}
 
