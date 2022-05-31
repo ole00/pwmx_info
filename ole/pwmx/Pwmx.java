@@ -56,7 +56,7 @@ public class Pwmx {
 		printInt("layer-img offset", imageDataOffset);
 		printFloat("intro24", intro24);
 		printFloat("intro32", intro32);
-		printFloat("intro40", intro32);
+		printFloat("intro40", intro40);
 		
 		System.out.println("---[header]------------------------");
 		printFloat("pixel size uM", pixelSizeUm);
