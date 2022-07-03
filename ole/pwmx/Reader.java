@@ -10,6 +10,8 @@ public class Reader {
 	static final byte[] TAG_HEADER  = "HEADER\0\0\0\0\0\0".getBytes();
 	static final byte[] TAG_PREVIEW = "PREVIEW\0\0\0\0\0".getBytes();
 	static final byte[] TAG_LAYERS  = "LAYERDEF\0\0\0\0".getBytes();
+	static final byte[] TAG_EXTRA   = "EXTRA\0\0\0\0\0\0\0".getBytes();
+	static final byte[] TAG_MACHINE = "MACHINE\0\0\0\0\0".getBytes();
 	
 	private static int parseIndex;
 	private static byte[] ptmp = new byte[4];
@@ -53,6 +55,12 @@ public class Reader {
 		parsePreview(p);
 		// 4. layer list and layer parameters
 		parseLayers(p);
+		
+		if (p.version == 516) {
+			parseExtra(p);
+			parseMachine(p);
+		}
+		
 		// 5. layer images - rle encoded. They are decoded on demand (see PwmxImageExport.java)
 		return p;
 	}
@@ -68,16 +76,23 @@ public class Reader {
 		
 		//reading starts here, each read seeks +4 bytes
 		p.version = parseInt(data);  //12
-		if (p.version != 1) {
-			throw new RuntimeException("intro version error");
+		if (p.version != 1 && p.version != 515 && p.version != 516) {
+			throw new RuntimeException("intro version error: " + p.version);
 		}
 		p.areaNum = parseInt(data); //16
 		p.headerDataOffset = parseInt(data); //20
 		p.intro24 = parseFloat(data); //24 - unknown
 		p.previewDataOffset = parseInt(data); //28
-		p.intro32 = parseFloat(data); //32 - unknown
+		p.intro32 = parseInt(data); //32 - unknown ? Preview Unknown data on v516?
 		p.layerDataOffset = parseInt(data); //36
-		p.intro40 = parseFloat(data); //40 - unknown
+		
+		// Photon Mono 4k - .pwma
+		if (p.version == 516) {
+			p.extraDataOffset = parseInt(data);
+			p.machineDataOffset = parseInt(data);
+		} else {
+			p.intro40 = parseFloat(data); //40 - unknown
+		}
 		p.imageDataOffset = parseInt(data); // start offset of the layer data images
 	}
 
@@ -95,7 +110,7 @@ public class Reader {
 		parseIndex += 12;
 		
 		//reading starts here, each read seeks +4 bytes
-		int payloadSize = parseInt(data);
+		p.headerPayloadSize = parseInt(data);
 		p.pixelSizeUm = parseFloat(data);
 		p.layerHeight = parseFloat(data); // in mm
 		p.exposureTime = parseFloat(data); //in sec.
@@ -116,7 +131,9 @@ public class Reader {
 		p.printTime = parseInt(data);
 		p.transitionLayerCount = parseInt(data);
 		p.padding2 = parseInt(data);
-		
+		if (p.version == 516) {
+			p.padding3 = parseInt(data);
+		}
 	}
 	
 	private static void parsePreview(Pwmx p) {
@@ -125,17 +142,24 @@ public class Reader {
 		parseIndex = p.previewDataOffset;
 		// check the first 12 bytes contain the preview tag
 		if (!compareTag(data, parseIndex, TAG_PREVIEW)) {
-			throw new RuntimeException("preview tag parse error");
+			throw new RuntimeException("preview tag parse error. parseIndex= 0x" + Integer.toHexString(parseIndex) );
 		}
 		// skip past the tag
 		parseIndex += 12;
 		
 		//reading starts here, each read seeks +4 bytes
-		int payloadSize = parseInt(data);
+		p.previewPayloadSize = parseInt(data);
 		p.previewW = parseInt(data);
 		p.previewDpi = parseInt(data);
 		p.previewH = parseInt(data);
 		p.previewImageOffset = parseIndex; // offset of the preview image within the file
+		
+		if (p.version == 516) {
+			parseIndex = p.intro32;
+			for (int i = 0; i < 7; i++) {
+				p.previewUnknown[i] = parseInt(data);;
+			}
+		}
 	}
 	
 	private static void parseLayers(Pwmx p) {
@@ -154,9 +178,11 @@ public class Reader {
 			parseLayer(p, i);
 		}
 		
-		// sanity check: check the layer image data follow the layer definition
-		if (parseIndex != p.imageDataOffset) {
-			throw new RuntimeException("layerdef size/parse error");		
+		if (p.version != 516) {
+			// sanity check: check the layer image data follow the layer definition
+			if (parseIndex != p.imageDataOffset) {
+				throw new RuntimeException("layerdef size/parse error");		
+			}
 		}
 	}
 	
@@ -176,6 +202,62 @@ public class Reader {
 		l.layer48 = parseFloat(data); // unknown, usually 0
 	}
 	
+	private static void parseExtra(Pwmx p) {	
+		byte[] data = p.rawData;
+		
+		//set initial seek offset for reading
+		parseIndex = p.extraDataOffset;
+		
+		// check the first 12 bytes contain the header tag
+		if (!compareTag(data, parseIndex, TAG_EXTRA)) {
+			throw new RuntimeException("Extra tag parse error");
+		}
+		//skip past the tag
+		parseIndex += 12;
+		
+		//reading starts here, each read seeks +4 bytes
+		p.extra0 = parseInt(data);
+		p.extra4 = parseInt(data);
+		p.extraLiftDistance1 = parseFloat(data);
+		p.extraLiftSpeed1 = parseFloat(data);
+		p.extraRetractSpeed1 = parseFloat(data);
+		p.extraLiftDistance2 = parseFloat(data);
+		p.extraLiftSpeed2 = parseFloat(data);
+		p.extraRetractSpeed2 = parseFloat(data);
+
+		p.extra32 = parseInt(data);
+		p.extraLiftDistance3 = parseFloat(data);
+		p.extraLiftSpeed3 = parseFloat(data);
+		p.extraRetractSpeed3 = parseFloat(data);
+		p.extraLiftDistance4 = parseFloat(data);
+		p.extraLiftSpeed4 = parseFloat(data);
+		p.extraRetractSpeed4 = parseFloat(data);
+	}
+	
+	private static void parseMachine(Pwmx p) {	
+		byte[] data = p.rawData;
+		
+		//set initial seek offset for reading
+		parseIndex = p.machineDataOffset;
+		
+		// check the first 12 bytes contain the header tag
+		if (!compareTag(data, parseIndex, TAG_MACHINE)) {
+			throw new RuntimeException("Machine tag parse error (offset=0x" + Integer.toHexString(parseIndex) +")");
+		}
+		//skip past the tag
+		parseIndex += 12;
+		
+		//reading starts here, each read seeks +4 bytes
+		p.machinePayloadSize = parseInt(data);
+		p.machineName = parseString(data, 96);
+		p.machineLayerImageFormat = parseString(data, 24);
+		p.machineVolumeX = parseFloat(data);
+		p.machineVolumeY = parseFloat(data);
+		p.machineVolumeZ = parseFloat(data);
+		p.machineVersion = parseInt(data);
+		p.machine140 = parseInt(data);
+	}
+	
 	// checks the passed tag matches a byte sequence in raw data 
 	private static boolean compareTag(byte[] data, int offset, byte[] tag) {
 		int max = tag.length;
@@ -186,6 +268,17 @@ public class Reader {
 			}
 		}
 		return true;
+	}
+	private static String parseString(byte[] data, int max) {
+		int end = parseIndex;
+		for (; end < parseIndex + max; end++) {
+			if (data[end] == 0) {
+				break;
+			}
+		}
+		String result = new String(data, parseIndex, end - parseIndex); 
+		parseIndex += max;
+		return result;
 	}
 
 	// read 32bit integer, Little Endian 

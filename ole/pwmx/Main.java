@@ -1,19 +1,12 @@
 package ole.pwmx;
 
-/*
-/home/ole/dl/3d_print/photon/models/t1.pwmx
-/home/ole/printing/data/stone/s5.pwmx
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 
-
-/home/ole/printing/data/stone/s_a.pwmx
-
-/home/ole/printing/data/stone/R_E_R_F.pwmx
-
-/home/ole/printing/data/stone/s1.pwmx
- */
 public class Main {
 
-	private static final String VERSION = "1.0";
+	private static final String VERSION = "1.1";
 	
 	private static void printHelp() {
 		System.out.println("PWMX Info v." + VERSION);
