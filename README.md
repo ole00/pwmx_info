@@ -13,6 +13,12 @@ A tool to decode parameters from PWMX files for Anycubic Photon Mono X 3D printe
 * have a tool to check the .pwmx file structure is correct
 * inspect the parameters of the .pwmx file before printing
 
+**Supported files:**
+* pwmx: Photon Mono X
+* pwmo: Photon Mono
+* pwma: Photon Mono 4k
+* dlp : Photon Ultra
+* possibly other
 
 **PWMX file structure:**
 * check the ole/pwmx/Reader.java that parses the file data
